@@ -1,0 +1,138 @@
+#!/home/lizandro/Escritorio/musicdownload/.mi_entorno/bin/python
+from yt_dlp import YoutubeDL
+import rich
+from rich import print
+from rich.panel import Panel
+from rich.console import Console
+from rich.table import Table
+from rich.prompt import Prompt
+from rich.text import Text
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+console=Console()
+def descargar(urls):
+    opciones_descarga = {
+            'format': 'bestaudio/best',
+            'writethumbnail': True,  # Descarga la imagen de miniatura
+            'postprocessors': [
+                {
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                },
+                {
+                    'key': 'EmbedThumbnail', # Incrusta la miniatura como carátula
+                },
+                {
+                    'key': 'FFmpegMetadata', # Añade metadatos (Título, Artista)
+                    'add_metadata': True,
+                }
+            ],
+            'outtmpl': '~/Música/%(title)s.%(ext)s',
+        }
+    with YoutubeDL(opciones_descarga) as ydl:
+        print('\n[bold green]Descargando...[/bold green]')
+        ydl.download(urls)
+        print('\n[bold green]Descarga completada![/bold green]')
+
+def seleccionar_opciones(max_op):
+    while True:
+        entrada = Prompt.ask(
+            "Selecciona opciones (ej: 1,3,5) o 0 para cancelar"
+        ).strip()
+
+        if entrada == "0":
+            return []
+
+        try:
+            seleccion = [int(x) for x in entrada.split(",")]
+            if all(1 <= x <= max_op for x in seleccion):
+                return seleccion
+        except ValueError:
+            pass
+
+        console.print("[red]Selección inválida. Intenta de nuevo.[/red]")
+def buscarenyt(query, cant_opciones):
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+        'extract_flat': True,
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        info=ydl.extract_info(f'ytsearch{cant_opciones}:{query}', download=False)
+    
+    resultados = []
+
+    for e in info['entries']:
+        resultados.append({
+            'title':e.get('title'),
+            'url':f"https://www.youtube.com/watch?v={e.get('id')}",
+            'duration':e.get('duration'),
+        })
+
+    return resultados
+    
+    
+def mostrar_resultados(resultados):
+    table=Table(title='Resultados de la busqueda')
+    table.add_column('NO.', style='cyan', justify='right')
+    table.add_column('Titulo', overflow='fold')
+    table.add_column('Duracion', style='green')
+
+    for i, r in enumerate(resultados, start=1):
+
+        titulo=r.get('title', 'Desconocido')
+        duracion=r.get('duration')
+        
+        if duracion:
+            duracion=int(duracion)
+            minutos, segundos = divmod(duracion, 60)
+            duracion_str = f"{minutos}:{segundos:02d}"
+        else:
+            duracion_str = "Desconocido"
+        table.add_row(str(i), titulo, duracion_str)
+    console.print(table)
+
+def main():
+    text=('''
+[italic bold bright_cyan]Esta aplicacion descarga musica desde YouTube en formato mp3
+      [italic bold bright_yellow]Usando:
+      [bold bright_green]Python3
+      yt-dlp
+      rich
+      ''')
+    print(Panel(text, border_style='magenta', title='[italic bold bright_cyan]HOLa'))
+
+    #pedir los datos---------------------------------
+    query=input("Nombre de la cancion o artista: ")
+    while True:
+        try:
+            cant_opciones=int(input("Opciones que deseas ver: "))
+            break
+        except ValueError:
+            print('Ingresa un valor entero!!')
+    #hacer la busqueda-------------------------------
+    resultados = buscarenyt(query, cant_opciones)
+    #mostrar la tabla con las opciones---------------
+    if not resultados:
+        print('No se encontraron resultados')
+        return
+    mostrar_resultados(resultados)
+
+
+    seleccion = seleccionar_opciones(len(resultados))
+
+    if not seleccion:
+        console.print("[yellow]Cancelado[/yellow]")
+        return
+
+    urls = [resultados[i - 1]["url"] for i in seleccion]
+
+    console.print("\n[bold green]Seleccionaste:[/bold green]")
+    for url in urls:
+        console.print(f"  • {url}")
+    
+    descargar(urls)
+
+if __name__ == "__main__":
+    main()
