@@ -6,34 +6,78 @@ from rich.panel import Panel
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt
+from rich.prompt import IntPrompt
 from rich.text import Text
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import(Progress, SpinnerColumn, BarColumn, TextColumn, DownloadColumn, TransferSpeedColumn, TimeElapsedColumn)
+import sys
+import yt_dlp
+import time
+import os
 
 console=Console()
+
+progress=Progress(
+TextColumn("[bold bright_blue]{task.description}"),
+SpinnerColumn(style='bold bright_magenta', spinner_name="earth"),
+BarColumn(
+    bar_width=40,
+    style="bright_red",
+    complete_style="bright_blue",
+    finished_style="bright_green"),
+DownloadColumn(),
+TransferSpeedColumn(),
+TimeElapsedColumn(),
+expand=True,
+)
+
 def descargar(urls):
-    opciones_descarga = {
-            'format': 'bestaudio/best',
-            'writethumbnail': True,  # Descarga la imagen de miniatura
-            'postprocessors': [
-                {
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                },
-                {
-                    'key': 'EmbedThumbnail', # Incrusta la miniatura como carátula
-                },
-                {
-                    'key': 'FFmpegMetadata', # Añade metadatos (Título, Artista)
-                    'add_metadata': True,
+    try:
+        with progress:
+            task_id = progress.add_task(
+            "[cyan]Descargando",
+            total=1
+            )
+            def hook(d):
+                if d['status'] == 'downloading':
+                    total = d.get('total_bytes') or d.get('total_bytes_estimate')
+                    downloaded = d.get('downloaded_bytes', 0)
+
+                    if total:
+                        progress.update(task_id, total=total, completed=downloaded)
+
+                elif d['status'] == 'finished':
+                    progress.update(task_id, completed=progress.tasks[0].total)
+                    
+            opciones_descarga = {
+                    'format': 'bestaudio/best',
+                    'quiet': True,
+                    'no_warnings': True,
+                    'no_progress':True,
+                    'progress_hooks': [hook],
+                    'writethumbnail': True,  
+                    'postprocessors': [
+                        {
+                            'key': 'FFmpegExtractAudio',
+                            'preferredcodec': 'mp3',
+                            'preferredquality': '192',
+                        },
+                        {
+                            'key': 'EmbedThumbnail',
+                        },
+                        {
+                            'key': 'FFmpegMetadata',
+                            'add_metadata': True,
+                        }
+                    ],
+                    'outtmpl': '~/Música/%(title)s.%(ext)s',
                 }
-            ],
-            'outtmpl': '~/Música/%(title)s.%(ext)s',
-        }
-    with YoutubeDL(opciones_descarga) as ydl:
-        print('\n[bold green]Descargando...[/bold green]')
-        ydl.download(urls)
-        print('\n[bold green]Descarga completada![/bold green]')
+
+            with YoutubeDL(opciones_descarga) as ydl:
+                ydl.download(urls)
+                console.print('\n[bold green]Descarga completada![/bold green]')
+    except yt_dlp.utils.DownloadError as e:
+        console.print(f"[bold bright_red]Error de descarga o de conexion: {e}")
+        salida()
 
 def seleccionar_opciones(max_op):
     while True:
@@ -52,31 +96,39 @@ def seleccionar_opciones(max_op):
             pass
 
         console.print("[red]Selección inválida. Intenta de nuevo.[/red]")
+
 def buscarenyt(query, cant_opciones):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'quiet': True,
-        'extract_flat': True,
-    }
-    with YoutubeDL(ydl_opts) as ydl:
-        info=ydl.extract_info(f'ytsearch{cant_opciones}:{query}', download=False)
-    
-    resultados = []
+    try:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'no_warnings': True,
+            'no_progress': True
+        }
+        
+        with YoutubeDL(ydl_opts) as ydl:
+            info=ydl.extract_info(f'ytsearch{cant_opciones}:{query}', download=False)
+        
+        resultados = []
 
-    for e in info['entries']:
-        resultados.append({
-            'title':e.get('title'),
-            'url':f"https://www.youtube.com/watch?v={e.get('id')}",
-            'duration':e.get('duration'),
-        })
+        for e in info['entries']:
+            resultados.append({
+                'title':e.get('title'),
+                'url':f"https://www.youtube.com/watch?v={e.get('id')}",
+                'duration':e.get('duration'),
+            })
 
-    return resultados
+        return resultados
+    except yt_dlp.utils.DownloadError as e:
+        console.print(f"[bold bright_yellow]ERROR DE BUSQUEDA O DE CONEXION:[bold bright_blue]{e}")
+    except OSError as e:
+        console.print(f"Error de conexion: {e}")
     
     
 def mostrar_resultados(resultados):
-    table=Table(title='Resultados de la busqueda')
+    table=Table(title='Resultados de la busqueda', style='bright_magenta')
     table.add_column('NO.', style='cyan', justify='right')
-    table.add_column('Titulo', overflow='fold')
+    table.add_column('Titulo', overflow='fold', style='blue')
     table.add_column('Duracion', style='green')
 
     for i, r in enumerate(resultados, start=1):
@@ -93,46 +145,85 @@ def mostrar_resultados(resultados):
         table.add_row(str(i), titulo, duracion_str)
     console.print(table)
 
-def main():
+def baner():
     text=('''
-[italic bold bright_cyan]Esta aplicacion descarga musica desde YouTube en formato mp3
-      [italic bold bright_yellow]Usando:
-      [bold bright_green]Python3
-      yt-dlp
-      rich
-      ''')
-    print(Panel(text, border_style='magenta', title='[italic bold bright_cyan]HOLa'))
+    [bold bright_cyan]
+    ░█░█░▀█▀░█▄█░█░█░█▀▀░▀█▀░█▀▀
+    ░░█░░░█░░█░█░█░█░▀▀█░░█░░█░░
+    ░░▀░░░▀░░▀░▀░▀▀▀░▀▀▀░▀▀▀░▀▀▀ [bold yellow]D O W N L O A D . . .
 
-    #pedir los datos---------------------------------
-    query=input("Nombre de la cancion o artista: ")
-    while True:
-        try:
-            cant_opciones=int(input("Opciones que deseas ver: "))
-            break
-        except ValueError:
-            print('Ingresa un valor entero!!')
-    #hacer la busqueda-------------------------------
-    resultados = buscarenyt(query, cant_opciones)
-    #mostrar la tabla con las opciones---------------
-    if not resultados:
-        print('No se encontraron resultados')
-        return
-    mostrar_resultados(resultados)
+    [italic bold bright_magenta]DESCARGA MUSICA DESDE YT EN FORMATO [bold bright_green]mp3
 
+        [bold bright_green].Python3
+        .yt-dlp
+        .rich
+        ''')
+    console.print(Panel(text, 
+                        border_style='bright_magenta', 
+                        title='[italic bold bright_yellow]by liz', 
+                        title_align='left',
+                        subtitle='[italic bold bright_yellow]HOLA!',
+                        subtitle_align='center'))
 
-    seleccion = seleccionar_opciones(len(resultados))
+def salida():
+    a=Prompt.ask("[bold bright_red]DESEAS SALIR DE LA APLICACION? (Y/N)")
 
-    if not seleccion:
-        console.print("[yellow]Cancelado[/yellow]")
-        return
+    if a.lower() == 'y':
+        console.print('[bold bright_green]GRACIAS POR USAR MI SOFTWARE :) ...\n')
+        console.print(F"[bold bright_blue]PYTHON:[yellow]{sys.version}, [bold bright_magenta]EJECUTADO EN: [bold bright_cyan]{sys.platform}")
+    else:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        with progress:
+            task=progress.add_task('REINICIANDO')
+            for i in range(100):
+                time.sleep(0.01)
+                progress.update(task, advance=1)
+        main()
 
-    urls = [resultados[i - 1]["url"] for i in seleccion]
+def main():
+    try:
+        baner()
+        #pedir los datos---------------------------------
+        query=Prompt.ask("[bold bright_cyan]Nombre de la cancion o artista")
+        while True:
+            try:
+                cant_opciones=IntPrompt.ask("[bold bright_cyan]Opciones que deseas ver")
+                if cant_opciones==0:
+                    console.print(F'[bold bright_yellow]NO PUEDES BUSCAR [green]{cant_opciones}[/] OPCIONES')
+                else:
+                    break
+            except ValueError:
+                console.print('[bold bright_red]Ingresa un valor entero!!')
 
-    console.print("\n[bold green]Seleccionaste:[/bold green]")
-    for url in urls:
-        console.print(f"  • {url}")
-    
-    descargar(urls)
+        #hacer la busqueda-------------------------------
+        resultados = buscarenyt(query, cant_opciones)
+
+        #mostar resultados--------------------------------
+        if not resultados:
+            console.print('[bold bright_yellow]No se encontraron resultados[/bold bright_yellow]')
+            salida()
+            return
+        mostrar_resultados(resultados)
+
+        #sleccionar una o varias opciones----------------
+        seleccion = seleccionar_opciones(len(resultados))
+
+        if not seleccion:
+            console.print("[yellow]Cancelado[/yellow]")
+            return
+
+        urls = [resultados[i - 1]["url"] for i in seleccion]
+
+        console.print("\n[bold green]Seleccionaste:[/bold green]")
+        for url in urls:
+            console.print(f"  • {url}")
+        descargar(urls)
+        salida()
+
+    except KeyboardInterrupt:
+        console.print('[bold bright_red]Cancelado por el usuario!')
+        salida()
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
