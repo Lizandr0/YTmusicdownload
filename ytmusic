@@ -1,4 +1,4 @@
-#!/home/lizandro/Escritorio/musicdownload/.mi_entorno/bin/python
+#!/home/lizandro/Escritorio/musicdownload/entorno/bin/python
 from yt_dlp import YoutubeDL
 import rich
 from rich import print
@@ -170,7 +170,7 @@ def salida():
 
     if a.lower() == 'y':
         console.print('[bold bright_green]GRACIAS POR USAR MI SOFTWARE :) ...\n')
-        console.print(F"[bold bright_blue]PYTHON:[yellow]{sys.version}, [bold bright_magenta]EJECUTADO EN: [bold bright_cyan]{sys.platform}")
+        console.print(F"[bold bright_blue]PYTHON: [yellow]{sys.version}, [bold bright_magenta]EJECUTADO EN: [bold bright_cyan]{sys.platform}")
     else:
         os.system('cls' if os.name == 'nt' else 'clear')
         with progress:
