@@ -16,3 +16,7 @@ cd YTmusicdownload
 pip install -r requirements.txt
 python ytmusic.py
 ```
+##ATENCION
+Puede que necesites configurar tu carpeta de archivos, cambialo sin comillas en la linea 72:
+'outtmpl': '/aqui va tu carpeta/%(title)s.%(ext)s'
+Ve a tu directorio copialo tal cul esta, pegalo y listo
