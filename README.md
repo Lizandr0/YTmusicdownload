@@ -1,19 +1,16 @@
 # YTMusicDownload
 
-Aplicación de línea de comandos que permite descargar música en formato **MP3** de forma rápida y sencilla desde la terminal.
+Aplicación para descargar música en formato **MP3** de forma rápida y sencilla desde la terminal, principalmente en Linux, Temux y/o consola de windows.
 
 ---
-- Descarga música en formato MP3
+- Formato MP3
+- Linux
+- Temux
+- Windows
   
 ## Instalación
 
 ```bash
-git clone ...
-cd ...
+git clone https://github.com/Lizandr0/YTmusicdownload/edit/main/README.md
+cd YTmusicdownload
 pip install -r requirements.txt
-
-
-```markdown
-## Uso
-
-python ytmusic.py
