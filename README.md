@@ -14,3 +14,5 @@ Aplicación para descargar música en formato **MP3** de forma rápida y sencill
 git clone https://github.com/Lizandr0/YTmusicdownload/edit/main/README.md
 cd YTmusicdownload
 pip install -r requirements.txt
+python ytmusic.py
+```
